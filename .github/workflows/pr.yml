@@ -1,0 +1,35 @@
+name: Pull request checks
+
+concurrency:
+    group: ${{ github.head_ref || github.ref_name }}
+    cancel-in-progress: true
+
+on:
+    pull_request:
+        branches: ['master']
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        timeout-minutes: 3
+        steps:
+            - name: Setup .Net 8
+              uses: actions/setup-dotnet@v4
+              with:
+                    dotnet-version: '8.x'
+                    cache: true
+                    
+            - name: Install Dependencies
+              run: dotnet restore
+              
+            - name: Build
+              run: dotnet build
+              
+            - name: Run Stylecop Check
+              run: dotnet format analyzers --verify-no-changes && dotnet format style --verify-no-changes
+
+            - name: Run Csharpier Check
+              run: dotnet csharpier . --check
+
+            - name: Run Unit / Integration Tests
+              run: dotnet test
