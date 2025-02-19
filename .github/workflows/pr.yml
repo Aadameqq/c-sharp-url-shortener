@@ -18,7 +18,7 @@ jobs:
               with:
                     dotnet-version: '8.x'
                     cache: true
-                    cache-dependency-path: '**/package.lock.json'
+                    cache-dependency-path: './tests/Core.Tests/package.lock.json' './src/Api/package.lock.json' './src/Core/package.lock.json' './src/Infrastructure/package.lock.json'
                     
             - name: Install Dependencies
               run: dotnet restore --locked-mode
