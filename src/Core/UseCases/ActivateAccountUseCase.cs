@@ -27,8 +27,7 @@ public class ActivateAccountUseCase(
 
         user.Activate();
 
-        await accountsRepository.Update(user);
-        await accountsRepository.Flush();
+        await accountsRepository.UpdateAndFlush(user);
 
         return Result.Success();
     }

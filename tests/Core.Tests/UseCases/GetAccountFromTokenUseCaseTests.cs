@@ -1,3 +1,4 @@
+using Core.Domain;
 using Core.Dtos;
 using Core.Exceptions;
 using Core.Ports;
@@ -8,9 +9,8 @@ namespace Core.Tests.UseCases;
 
 public class GetAccountFromTokenUseCaseTests
 {
-    private readonly Mock<AccessTokenService> accessTokenServiceMock = new();
-
-    private readonly AccessTokenPayload testPayload = new(Guid.Empty, Guid.Empty);
+    private readonly AccessTokenPayload testPayload = new(Guid.Empty, Guid.Empty, Role.None);
+    private readonly Mock<TokenService> tokenServiceMock = new();
 
     private readonly GetAccountFromTokenUseCase useCase;
 
@@ -18,11 +18,9 @@ public class GetAccountFromTokenUseCaseTests
 
     public GetAccountFromTokenUseCaseTests()
     {
-        useCase = new GetAccountFromTokenUseCase(accessTokenServiceMock.Object);
+        useCase = new GetAccountFromTokenUseCase(tokenServiceMock.Object);
 
-        accessTokenServiceMock
-            .Setup(x => x.FetchPayloadIfValid(validToken))
-            .ReturnsAsync(testPayload);
+        tokenServiceMock.Setup(x => x.FetchPayloadIfValid(validToken)).ReturnsAsync(testPayload);
     }
 
     [Fact]

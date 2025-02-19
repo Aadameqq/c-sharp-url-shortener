@@ -4,9 +4,9 @@ using Core.Ports;
 
 namespace Core.UseCases;
 
-public class LogOutUseCase(AccountsRepository accountsRepository)
+public class UnassignRoleUseCase(AccountsRepository accountsRepository)
 {
-    public async Task<Result> Execute(Guid accountId, Guid sessionId)
+    public async Task<Result> Execute(Guid issuerId, Guid accountId)
     {
         var account = await accountsRepository.FindById(accountId);
 
@@ -15,7 +15,12 @@ public class LogOutUseCase(AccountsRepository accountsRepository)
             return new NoSuch<Account>();
         }
 
-        account.DestroySession(sessionId);
+        var result = account.RemoveRole(issuerId);
+
+        if (result is { IsFailure: true, Exception: CannotManageOwn<Role> })
+        {
+            return result.Exception;
+        }
 
         await accountsRepository.UpdateAndFlush(account);
 

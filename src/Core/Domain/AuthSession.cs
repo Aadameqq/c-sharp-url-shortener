@@ -1,32 +1,41 @@
+using Core.Exceptions;
+
 namespace Core.Domain;
 
 public class AuthSession
 {
-    private DateTime expiresAt;
-    private TimeSpan lifeSpan = TimeSpan.FromMinutes(30);
+    private readonly TimeSpan lifeSpan = TimeSpan.FromMinutes(30);
 
-    public AuthSession(Guid userId, DateTime now, string refreshToken)
+    private Guid currentTokenId;
+    private DateTime expiresAt;
+
+    public AuthSession(Guid userId, DateTime now)
     {
         UserId = userId;
         expiresAt = now + lifeSpan;
-        CurrentToken = refreshToken;
+        currentTokenId = Guid.NewGuid();
     }
 
     private AuthSession() { }
 
     public Guid Id { get; init; } = Guid.NewGuid();
-    public string CurrentToken { get; private set; }
+
+    public RefreshToken CurrentToken => new(currentTokenId, Id);
+
     public Guid UserId { get; }
 
-    public ArchivedToken GetTokenForArchiving()
+    public Result<RefreshToken> Refresh(DateTime now)
     {
-        return new ArchivedToken(CurrentToken, Id);
-    }
+        if (!IsActive(now))
+        {
+            return new SessionInactive();
+        }
 
-    public void Refresh(string newToken, DateTime now)
-    {
-        CurrentToken = newToken;
+        currentTokenId = Guid.NewGuid();
+
         expiresAt = now + lifeSpan;
+
+        return CurrentToken;
     }
 
     public bool IsActive(DateTime now)

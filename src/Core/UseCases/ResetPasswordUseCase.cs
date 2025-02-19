@@ -7,8 +7,7 @@ namespace Core.UseCases;
 public class ResetPasswordUseCase(
     PasswordHasher passwordHasher,
     AccountsRepository accountsRepository,
-    PasswordResetCodesRepository passwordResetCodesRepository,
-    AuthSessionsRepository authSessionsRepository
+    PasswordResetCodesRepository passwordResetCodesRepository
 )
 {
     public async Task<Result> Execute(string resetCode, string newPassword)
@@ -29,13 +28,9 @@ public class ResetPasswordUseCase(
 
         var passwordHash = passwordHasher.HashPassword(newPassword);
 
-        account.ChangePassword(passwordHash);
+        account.ResetPassword(passwordHash);
 
-        await accountsRepository.Update(account);
-
-        await authSessionsRepository.RemoveAllByAccountAndFlush(account);
-
-        await accountsRepository.Flush();
+        await accountsRepository.UpdateAndFlush(account);
 
         return Result.Success();
     }

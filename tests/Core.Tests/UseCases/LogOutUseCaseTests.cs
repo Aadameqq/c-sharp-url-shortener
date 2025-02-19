@@ -8,55 +8,54 @@ namespace Core.Tests.UseCases;
 
 public class LogOutUseCaseTests
 {
-    private readonly Mock<AuthSessionsRepository> authSessionsRepositoryMock = new();
+    private readonly Mock<AccountsRepository> accountsRepositoryMock = new();
 
-    private readonly AuthSession existingSession = new(
-        Guid.Empty,
-        DateTime.MinValue,
-        "refreshToken"
-    );
+    private readonly Account existingAccount = new("userName", "email", "password");
 
     private readonly LogOutUseCase useCase;
 
     public LogOutUseCaseTests()
     {
-        useCase = new LogOutUseCase(authSessionsRepositoryMock.Object);
+        existingAccount.Activate();
 
-        authSessionsRepositoryMock
-            .Setup(x => x.FindById(existingSession.Id))
-            .ReturnsAsync(existingSession);
+        useCase = new LogOutUseCase(accountsRepositoryMock.Object);
+
+        accountsRepositoryMock
+            .Setup(x => x.FindById(existingAccount.Id))
+            .ReturnsAsync(existingAccount);
     }
 
     [Fact]
-    public async Task WhenSessionWithGivenIdDoesNotExist_ShouldFail()
+    public async Task WhenAccountWithGivenIdDoesNotExist_ShouldFail()
     {
-        var result = await useCase.Execute(Guid.Empty);
+        var result = await useCase.Execute(Guid.Empty, Guid.Empty);
 
         Assert.True(result.IsFailure);
-        Assert.IsType<NoSuch<AuthSession>>(result.Exception);
-        AssertNoRepositoryChanges();
+        Assert.IsType<NoSuch<Account>>(result.Exception);
+        AssertNoChanges();
     }
 
     [Fact]
-    public async Task WhenSessionWithGivenIdExists_ShouldSucceedAndRemoveSession()
+    public async Task WhenAccountWithGivenIdExists_ShouldSucceedAndRemoveSession()
     {
-        AuthSession? removedSession = null;
+        var testToken = existingAccount.CreateSession(DateTime.MinValue).Value;
 
-        authSessionsRepositoryMock
-            .Setup(x => x.Remove(It.IsAny<AuthSession>()))
-            .Callback<AuthSession>(s => removedSession = s);
+        Account? actualAccount = null;
 
-        var result = await useCase.Execute(existingSession.Id);
+        accountsRepositoryMock
+            .Setup(x => x.UpdateAndFlush(It.IsAny<Account>()))
+            .Callback<Account>(a => actualAccount = a);
+
+        var result = await useCase.Execute(existingAccount.Id, testToken.SessionId);
 
         Assert.True(result.IsSuccess);
-        Assert.NotNull(removedSession);
-        Assert.Equivalent(existingSession, removedSession);
-
-        authSessionsRepositoryMock.Verify(x => x.Flush(), Times.AtLeastOnce);
+        Assert.NotNull(actualAccount);
+        Assert.Equal(existingAccount.Id, actualAccount.Id);
+        Assert.Null(actualAccount.GetSessionCurrentToken(testToken.SessionId));
     }
 
-    private void AssertNoRepositoryChanges()
+    private void AssertNoChanges()
     {
-        authSessionsRepositoryMock.Verify(x => x.Flush(), Times.Never);
+        accountsRepositoryMock.Verify(x => x.UpdateAndFlush(It.IsAny<Account>()), Times.Never);
     }
 }

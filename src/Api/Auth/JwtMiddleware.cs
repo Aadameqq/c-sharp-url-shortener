@@ -20,7 +20,7 @@ public class JwtMiddleware(RequestDelegate next, GetAccountFromTokenUseCase toke
 
         if (string.IsNullOrEmpty(headerContent) || !headerContent.StartsWith(tokenType))
         {
-            await Results.Unauthorized().ExecuteAsync(ctx);
+            await ApiResponse.ApplyAsync(ctx, ApiResponse.Unauthorized());
             return;
         }
 
@@ -30,13 +30,14 @@ public class JwtMiddleware(RequestDelegate next, GetAccountFromTokenUseCase toke
 
         if (result.IsFailure)
         {
-            await Results.Unauthorized().ExecuteAsync(ctx);
+            await ApiResponse.ApplyAsync(ctx, ApiResponse.Unauthorized());
             return;
         }
 
         ctx.Items["authorizedUser"] = new AuthorizedUser(
             result.Value.UserId,
-            result.Value.SessionId
+            result.Value.SessionId,
+            result.Value.Role
         );
         await next(ctx);
     }

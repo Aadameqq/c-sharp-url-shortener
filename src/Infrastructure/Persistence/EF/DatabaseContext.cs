@@ -7,9 +7,7 @@ namespace Infrastructure.Persistence.EF;
 
 public class DatabaseContext(IOptions<DatabaseOptions> databaseConfig) : DbContext
 {
-    public DbSet<Account> Users { get; set; }
-    public DbSet<ArchivedToken> ArchivedTokens { get; set; }
-    public DbSet<AuthSession> AuthSessions { get; set; }
+    public DbSet<Account> Accounts { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -18,31 +16,26 @@ public class DatabaseContext(IOptions<DatabaseOptions> databaseConfig) : DbConte
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<ArchivedToken>(b =>
+        modelBuilder.Entity<Account>(accountBuilder =>
         {
-            b.Property<Guid>("id").ValueGeneratedOnAdd();
-            b.Property<string>("Token").HasColumnName("Token");
+            accountBuilder.Property<Guid>("Id");
+            accountBuilder.Property<bool>("activated").HasColumnName("Activated");
 
-            modelBuilder
-                .Entity<ArchivedToken>()
-                .HasOne(a => a.Session)
-                .WithMany()
-                .HasForeignKey(a => a.SessionId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
+            accountBuilder.Property(u => u.Role)
+                .HasConversion(role => role.Name, name => Role.ParseOrFail(name))
+                .HasColumnType("varchar(50)");
 
-        modelBuilder.Entity<AuthSession>(b =>
-        {
-            b.Property<Guid>("Id").ValueGeneratedOnAdd();
-            b.Property<DateTime>("expiresAt").HasColumnName("ExpiresAt");
-            b.Property<Guid>("UserId").HasColumnName("UserId");
-            b.Property<string>("CurrentToken").HasColumnName("CurrentToken");
-        });
-
-        modelBuilder.Entity<Account>(b =>
-        {
-            b.Property<Guid>("Id").ValueGeneratedOnAdd();
-            b.Property<bool>("activated").HasColumnName("Activated");
+            accountBuilder.OwnsMany<AuthSession>(
+                "sessions",
+                sessionBuilder =>
+                {
+                    sessionBuilder.Property<Guid>("Id");
+                    sessionBuilder.Property<DateTime>("expiresAt").HasColumnName("ExpiresAt");
+                    sessionBuilder.Property<Guid>("AccountId").HasColumnName("AccountId");
+                    sessionBuilder.Property<Guid>("currentTokenId").HasColumnName("CurrentTokenId");
+                    sessionBuilder.WithOwner().HasForeignKey("AccountId");
+                }
+            );
         });
     }
 }

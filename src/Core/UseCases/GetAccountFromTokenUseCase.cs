@@ -5,11 +5,11 @@ using Core.Ports;
 
 namespace Core.UseCases;
 
-public class GetAccountFromTokenUseCase(AccessTokenService accessTokenService)
+public class GetAccountFromTokenUseCase(TokenService tokenService)
 {
     public async Task<Result<AccessTokenPayload>> Execute(string accessToken)
     {
-        var payload = await accessTokenService.FetchPayloadIfValid(accessToken);
+        var payload = await tokenService.FetchPayloadIfValid(accessToken);
 
         if (payload is null)
         {

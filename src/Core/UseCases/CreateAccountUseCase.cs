@@ -25,11 +25,12 @@ public class CreateAccountUseCase(
         var account = new Account(userName, email, hashedPassword);
 
         await accountsRepository.Create(account);
-        await accountsRepository.Flush();
 
         var code = await activationCodesRepository.Create(account);
 
         codeEmailSender.Send(account, code);
+
+        await accountsRepository.Flush();
 
         return Result.Success();
     }

@@ -8,23 +8,29 @@ public class EfAccountsRepository(DatabaseContext ctx) : AccountsRepository
 {
     public Task<Account?> FindByEmail(string email)
     {
-        return ctx.Users.FirstOrDefaultAsync(u => u.Email == email);
+        return ctx.Accounts.FirstOrDefaultAsync(u => u.Email == email);
     }
 
     public Task<Account?> FindById(Guid id)
     {
-        return ctx.Users.FirstOrDefaultAsync(u => u.Id == id);
+        return ctx.Accounts.FirstOrDefaultAsync(u => u.Id == id);
     }
 
     public async Task Create(Account account)
     {
-        await ctx.Users.AddAsync(account);
+        await ctx.Accounts.AddAsync(account);
     }
 
     public Task Update(Account account)
     {
-        ctx.Users.Update(account);
+        ctx.Accounts.Update(account);
         return Task.CompletedTask;
+    }
+
+    public async Task UpdateAndFlush(Account account)
+    {
+        await Update(account);
+        await Flush();
     }
 
     public async Task Flush()

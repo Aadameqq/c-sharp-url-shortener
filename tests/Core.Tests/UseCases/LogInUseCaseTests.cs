@@ -1,4 +1,5 @@
 using Core.Domain;
+using Core.Dtos;
 using Core.Exceptions;
 using Core.Ports;
 using Core.UseCases;
@@ -8,30 +9,25 @@ namespace Core.Tests.UseCases;
 
 public class LogInUseCaseTests
 {
-    private readonly Mock<AccessTokenService> accessTokenServiceMock = new();
     private readonly Mock<AccountsRepository> accountsRepositoryMock = new();
-    private readonly Mock<AuthSessionsRepository> authSessionsRepositoryMock = new();
     private readonly Mock<DateTimeProvider> dateTimeProviderMock = new();
 
     private readonly Account existingAccount = new("userName", "email", "password");
     private readonly string existingPlainPassword = "plain-password";
-    private readonly string generatedAccessToken = "access-token";
-    private readonly string generatedRefreshToken = "refresh-token";
+    private readonly TokenPairOutput generatedTokenPair = new("access-token", "refresh-token");
 
     private readonly Mock<PasswordVerifier> passwordVerifierMock = new();
-    private readonly Mock<RefreshTokensFactory> refreshTokensFactoryMock = new();
+    private readonly Mock<TokenService> tokenServiceMock = new();
 
     private readonly LogInUseCase useCase;
 
     public LogInUseCaseTests()
     {
         useCase = new LogInUseCase(
-            refreshTokensFactoryMock.Object,
             accountsRepositoryMock.Object,
-            accessTokenServiceMock.Object,
+            tokenServiceMock.Object,
             passwordVerifierMock.Object,
-            dateTimeProviderMock.Object,
-            authSessionsRepositoryMock.Object
+            dateTimeProviderMock.Object
         );
 
         accountsRepositoryMock
@@ -44,21 +40,19 @@ public class LogInUseCaseTests
 
         dateTimeProviderMock.Setup(x => x.Now()).Returns(DateTime.MinValue);
 
-        refreshTokensFactoryMock.Setup(x => x.Generate()).Returns(generatedRefreshToken);
-
-        accessTokenServiceMock
-            .Setup(x => x.Create(It.Is((AuthSession s) => IsExpectedAuthSession(s))))
-            .Returns(generatedAccessToken);
+        tokenServiceMock
+            .Setup(x => x.CreateTokenPair(existingAccount, It.IsAny<Guid>(), It.IsAny<Guid>()))
+            .Returns(generatedTokenPair);
     }
 
     [Fact]
-    public async Task WhenAccountDoesNotExist_ShouldFail()
+    public async Task WhenAccountWithGivenEmailDoesNotExist_ShouldFail()
     {
         var result = await useCase.Execute("invalid-email", existingAccount.Password);
 
         Assert.True(result.IsFailure);
         Assert.IsType<NoSuch<Account>>(result.Exception);
-        AssertNoRepositoryChanges();
+        AssertNoChanges();
     }
 
     [Fact]
@@ -68,7 +62,7 @@ public class LogInUseCaseTests
 
         Assert.True(result.IsFailure);
         Assert.IsType<InvalidCredentials>(result.Exception);
-        AssertNoRepositoryChanges();
+        AssertNoChanges();
     }
 
     [Fact]
@@ -78,36 +72,55 @@ public class LogInUseCaseTests
 
         Assert.True(result.IsFailure);
         Assert.IsType<AccountNotActivated>(result.Exception);
-        AssertNoRepositoryChanges();
+        AssertNoChanges();
     }
 
     [Fact]
-    public async Task WhenCredentialsAreValidAndAccountHasBeenActivated_ShouldSucceedAndPersistSession()
+    public async Task WhenCredentialsAreValidAndAccountHasBeenActivated_ShouldReturnCorrectTokens()
     {
         existingAccount.Activate();
 
         var result = await useCase.Execute(existingAccount.Email, existingPlainPassword);
 
         Assert.True(result.IsSuccess);
-        Assert.Same(generatedAccessToken, result.Value.AccessToken);
-        Assert.Same(generatedRefreshToken, result.Value.RefreshToken);
-
-        authSessionsRepositoryMock.Verify(
-            x => x.Create(It.Is((AuthSession s) => IsExpectedAuthSession(s))),
-            Times.Once
-        );
-        authSessionsRepositoryMock.Verify(x => x.Flush(), Times.AtLeastOnce);
+        Assert.Same(generatedTokenPair.AccessToken, result.Value.AccessToken);
+        Assert.Same(generatedTokenPair.RefreshToken, result.Value.RefreshToken);
     }
 
-    private void AssertNoRepositoryChanges()
+    [Fact]
+    public async Task WhenCredentialsAreValidAndAccountHasBeenActivated_UpdateAccountAndCreateSession()
     {
-        accountsRepositoryMock.Verify(x => x.Flush(), Times.Never);
-        authSessionsRepositoryMock.Verify(x => x.Flush(), Times.Never);
+        existingAccount.Activate();
+
+        Account actualAccount = null!;
+
+        accountsRepositoryMock
+            .Setup(r => r.UpdateAndFlush(It.IsAny<Account>()))
+            .Callback((Account a) => actualAccount = a);
+
+        var sessionId = Guid.Empty;
+        var tokenId = Guid.Empty;
+
+        tokenServiceMock
+            .Setup(t => t.CreateTokenPair(It.IsAny<Account>(), It.IsAny<Guid>(), It.IsAny<Guid>()))
+            .Callback((Account _, Guid s, Guid t) =>
+            {
+                sessionId = s;
+                tokenId = t;
+            }).Returns(generatedTokenPair);
+
+        await useCase.Execute(existingAccount.Email, existingPlainPassword);
+
+        var createdSession = actualAccount.GetSessionCurrentToken(sessionId);
+
+        Assert.NotNull(actualAccount);
+        Assert.Equal(existingAccount.Id, actualAccount.Id);
+        Assert.NotNull(createdSession);
+        Assert.Equal(tokenId, createdSession.Id);
     }
 
-    private bool IsExpectedAuthSession(AuthSession authSession)
+    private void AssertNoChanges()
     {
-        return authSession.CurrentToken == generatedRefreshToken
-            && authSession.UserId == existingAccount.Id;
+        accountsRepositoryMock.Verify(x => x.UpdateAndFlush(It.IsAny<Account>()), Times.Never);
     }
 }

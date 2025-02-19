@@ -39,7 +39,7 @@ public class ActivateAccountUseCaseTests
 
         Assert.True(result.IsFailure);
         Assert.IsType<NoSuch>(result.Exception);
-        AssertNoRepositoryChanges();
+        AssertNoChanges();
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class ActivateAccountUseCaseTests
 
         Assert.True(result.IsFailure);
         Assert.IsType<NoSuch<Account>>(result.Exception);
-        AssertNoRepositoryChanges();
+        AssertNoChanges();
     }
 
     [Fact]
@@ -62,21 +62,19 @@ public class ActivateAccountUseCaseTests
         Account? actualAccount = null;
 
         accountsRepositoryMock
-            .Setup(x => x.Update(It.IsAny<Account>()))
+            .Setup(x => x.UpdateAndFlush(It.IsAny<Account>()))
             .Callback((Account account) => actualAccount = account);
 
         var result = await useCase.Execute(existingCode);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(actualAccount);
-        Assert.True(actualAccount.HasBeenActivated());
         Assert.Equal(existingAccount.Id, actualAccount.Id);
-
-        accountsRepositoryMock.Verify(x => x.Flush(), Times.AtLeastOnce);
+        Assert.True(actualAccount.HasBeenActivated());
     }
 
-    private void AssertNoRepositoryChanges()
+    private void AssertNoChanges()
     {
-        accountsRepositoryMock.Verify(x => x.Flush(), Times.Never);
+        accountsRepositoryMock.Verify(x => x.UpdateAndFlush(It.IsAny<Account>()), Times.Never);
     }
 }

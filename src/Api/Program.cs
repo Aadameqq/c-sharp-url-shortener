@@ -13,6 +13,7 @@ builder.Services.ConfigureCoreDependencies();
 builder.Services.AddControllers(options =>
 {
     options.ModelBinderProviders.Insert(0, new AuthorizedUserBinderProvider());
+    options.ModelBinderProviders.Insert(1, new AccessManagerBinderProvider());
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -54,9 +55,6 @@ builder.Services.AddSwaggerGen(options =>
             Description = "Application programming interface",
         }
     );
-
-    options.OperationFilter<IgnoreAuthorizedUserBodyFilter>();
-    options.DocumentFilter<RemoveAuthorizedUserSchemaFilter>();
 });
 
 var app = builder.Build();

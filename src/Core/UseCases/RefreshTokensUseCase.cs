@@ -6,47 +6,38 @@ using Core.Ports;
 namespace Core.UseCases;
 
 public class RefreshTokensUseCase(
-    AuthSessionsRepository authSessionsRepository,
+    AccountsRepository accountsRepository,
     DateTimeProvider dateTimeProvider,
-    RefreshTokensFactory refreshTokensFactory,
-    AccessTokenService accessTokenService
+    TokenService tokenService
 )
 {
     public async Task<Result<TokenPairOutput>> Execute(string token)
     {
-        var session = await authSessionsRepository.FindByToken(token);
+        var payload = await tokenService.FetchRefreshTokenPayloadIfValid(token);
 
-        if (session is null)
+        if (payload is null)
         {
-            var authSession = await authSessionsRepository.FindByArchivedToken(token);
-
-            if (authSession is null)
-            {
-                return new NoSuch<AuthSession>();
-            }
-
-            await authSessionsRepository.Remove(authSession);
-            await authSessionsRepository.Flush();
             return new InvalidToken();
         }
 
-        if (!session.IsActive(dateTimeProvider.Now()))
+        var account = await accountsRepository.FindById(payload.AccountId);
+
+        if (account is null)
         {
-            await authSessionsRepository.Remove(session);
-            await authSessionsRepository.Flush();
-            return new NoSuch<AuthSession>();
+            return new NoSuch<Account>();
         }
 
-        var refreshToken = refreshTokensFactory.Generate();
-        var accessToken = accessTokenService.Create(session);
+        var result = account.RefreshSession(payload.ToRefreshToken(), dateTimeProvider.Now());
 
-        await authSessionsRepository.ArchiveToken(session.GetTokenForArchiving());
+        if (result is { IsFailure: true, Exception: NoSuch<AuthSession> or InvalidToken })
+        {
+            await accountsRepository.UpdateAndFlush(account);
+            return result.Exception;
+        }
 
-        session.Refresh(refreshToken, dateTimeProvider.Now());
+        var pair = tokenService.CreateTokenPair(account, result.Value.SessionId, result.Value.Id);
 
-        await authSessionsRepository.Update(session);
-        await authSessionsRepository.Flush();
-
-        return new TokenPairOutput(accessToken, refreshToken);
+        await accountsRepository.UpdateAndFlush(account);
+        return pair;
     }
 }

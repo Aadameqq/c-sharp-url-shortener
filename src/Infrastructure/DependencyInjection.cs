@@ -1,5 +1,6 @@
 using Core.Ports;
 using Infrastructure.Options;
+using Infrastructure.Other;
 using Infrastructure.Persistence.EF;
 using Infrastructure.Persistence.Redis;
 using Infrastructure.smtp;
@@ -25,14 +26,12 @@ public static class DependencyInjection
         services.AddScoped<PasswordHasher, BCryptPasswordService>();
         services.AddScoped<PasswordVerifier, BCryptPasswordService>();
         services.AddScoped<AccountsRepository, EfAccountsRepository>();
-        services.AddScoped<AuthSessionsRepository, EfAuthSessionsRepository>();
-        services.AddScoped<RefreshTokensFactory, RefreshTokensFactoryImpl>();
         services.AddScoped<ActivationCodeEmailSender, ActivationCodeEmailSenderImpl>();
         services.AddScoped<EmailSender, SystemEmailSender>();
         services.AddScoped<ActivationCodesRepository, RedisActivationCodesRepository>();
         services.AddScoped<PasswordResetCodesRepository, RedisPasswordResetCodesRepository>();
         services.AddScoped<PasswordResetEmailSender, PasswordResetEmailSenderImpl>();
-        services.AddSingleton<AccessTokenService, AspAccessTokenService>();
+        services.AddSingleton<TokenService, SystemTokenService>();
         services.AddSingleton<DateTimeProvider, SystemDateTimeProvider>();
         return services;
     }

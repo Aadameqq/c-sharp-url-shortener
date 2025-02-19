@@ -9,7 +9,6 @@ namespace Core.Tests.UseCases;
 public class ResetPasswordUseCaseTests
 {
     private readonly Mock<AccountsRepository> accountsRepositoryMock = new();
-    private readonly Mock<AuthSessionsRepository> authSessionsRepositoryMock = new();
     private readonly Mock<PasswordResetCodesRepository> codesRepositoryMock = new();
 
     private readonly Account existingAccount = new("userName", "email", "password");
@@ -24,11 +23,10 @@ public class ResetPasswordUseCaseTests
 
     public ResetPasswordUseCaseTests()
     {
-        useCase = new(
+        useCase = new ResetPasswordUseCase(
             passwordHasherMock.Object,
             accountsRepositoryMock.Object,
-            codesRepositoryMock.Object,
-            authSessionsRepositoryMock.Object
+            codesRepositoryMock.Object
         );
 
         codesRepositoryMock
@@ -77,41 +75,21 @@ public class ResetPasswordUseCaseTests
     [Fact]
     public async Task WhenGivenCodeIsValid_ShouldChangePasswordAndPersist()
     {
-        Account? actualAccount = null;
+        Account actualAccount = null!;
 
         accountsRepositoryMock
-            .Setup(x => x.Update(It.IsAny<Account>()))
-            .Callback((Account a) => actualAccount = a);
-
-        await useCase.Execute(existingCode, testPassword);
-
-        existingAccount.ChangePassword(testPasswordHashed);
-
-        Assert.Equivalent(existingAccount, actualAccount);
-        accountsRepositoryMock.Verify(x => x.Flush(), Times.AtLeastOnce);
-    }
-
-    [Fact]
-    public async Task WhenGivenCodeIsValid_ShouldDestroyAllSessions()
-    {
-        Account? actualAccount = null;
-
-        authSessionsRepositoryMock
-            .Setup(x => x.RemoveAllByAccountAndFlush(It.IsAny<Account>()))
+            .Setup(x => x.UpdateAndFlush(It.IsAny<Account>()))
             .Callback((Account a) => actualAccount = a);
 
         await useCase.Execute(existingCode, testPassword);
 
         Assert.Equal(existingAccount.Id, actualAccount.Id);
+        Assert.Equal(testPasswordHashed, actualAccount.Password);
     }
 
     private void AssertNoChanges()
     {
-        accountsRepositoryMock.Verify(x => x.Flush(), Times.Never);
-        authSessionsRepositoryMock.Verify(
-            x => x.RemoveAllByAccountAndFlush(It.IsAny<Account>()),
-            Times.Never
-        );
+        accountsRepositoryMock.Verify(x => x.UpdateAndFlush(It.IsAny<Account>()), Times.Never);
         codesRepositoryMock.Verify(x => x.Create(It.IsAny<Account>()), Times.Never);
     }
 }
