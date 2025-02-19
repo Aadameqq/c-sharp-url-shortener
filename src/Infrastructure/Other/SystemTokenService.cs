@@ -107,6 +107,17 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
         }
     }
 
+    private static string GetClaim(ClaimsPrincipal principal, string claimType)
+    {
+        var claim = principal.Claims.FirstOrDefault(c => c.Type == claimType)?.Value;
+        if (claim is null)
+        {
+            throw new InvalidOperationException("No claim found for claim type");
+        }
+
+        return claim;
+    }
+
     private string CreateAccessToken(Account account, Guid sessionId)
     {
         var accessTokenClaims = new List<Claim>
@@ -141,16 +152,6 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
         );
     }
 
-    private static string GetClaim(ClaimsPrincipal principal, string claimType)
-    {
-        var claim = principal.Claims.FirstOrDefault(c => c.Type == claimType)?.Value;
-        if (claim is null)
-        {
-            throw new InvalidOperationException("No claim found for claim type");
-        }
-
-        return claim;
-    }
 
     private string GenerateToken(
         List<Claim> claims,
