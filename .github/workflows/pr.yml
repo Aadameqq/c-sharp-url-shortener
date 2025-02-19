@@ -18,11 +18,10 @@ jobs:
               with:
                     dotnet-version: '8.x'
                     cache: true
-                    cache-dependency-path: |
-                        '${{ github.workspace }}/src/Core/package.lock.json'
-                        '${{ github.workspace }}/src/Api/package.lock.json'
-                        '${{ github.workspace }}/src/Infrastructure/package.lock.json'
-                        '${{ github.workspace }}/tests/Core.Tests/package.lock.json'
+                    cache-dependency-path: './src/Core/package.lock.json'
+                        './src/Api/package.lock.json'
+                        './src/Infrastructure/package.lock.json'
+                        './src/Core.Tests/package.lock.json'
                     
             - name: Install Dependencies
               run: dotnet restore --locked-mode
