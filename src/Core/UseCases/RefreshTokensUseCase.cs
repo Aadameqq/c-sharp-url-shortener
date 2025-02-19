@@ -31,13 +31,13 @@ public class RefreshTokensUseCase(
 
         if (result is { IsFailure: true, Exception: NoSuch<AuthSession> or InvalidToken })
         {
+            await accountsRepository.UpdateAndFlush(account);
             return result.Exception;
         }
 
         var pair = tokenService.CreateTokenPair(account, result.Value.SessionId, result.Value.Id);
 
         await accountsRepository.UpdateAndFlush(account);
-
         return pair;
     }
 }

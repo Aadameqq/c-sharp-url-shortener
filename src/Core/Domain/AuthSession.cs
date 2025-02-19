@@ -4,20 +4,24 @@ namespace Core.Domain;
 
 public class AuthSession
 {
-    private DateTime expiresAt;
     private readonly TimeSpan lifeSpan = TimeSpan.FromMinutes(30);
+
+    private Guid currentTokenId;
+    private DateTime expiresAt;
 
     public AuthSession(Guid userId, DateTime now)
     {
         UserId = userId;
         expiresAt = now + lifeSpan;
-        CurrentToken = new RefreshToken(Id);
+        currentTokenId = Guid.NewGuid();
     }
 
     private AuthSession() { }
 
     public Guid Id { get; init; } = Guid.NewGuid();
-    public RefreshToken CurrentToken { get; private set; }
+
+    public RefreshToken CurrentToken => new(currentTokenId, Id);
+
     public Guid UserId { get; }
 
     public Result<RefreshToken> Refresh(DateTime now)
@@ -27,7 +31,7 @@ public class AuthSession
             return new SessionInactive();
         }
 
-        CurrentToken = new RefreshToken(Id);
+        currentTokenId = Guid.NewGuid();
 
         expiresAt = now + lifeSpan;
 

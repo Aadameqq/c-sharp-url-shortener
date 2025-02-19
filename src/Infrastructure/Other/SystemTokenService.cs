@@ -159,13 +159,14 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
         SymmetricSecurityKey signingKey
     )
     {
+        var hasLifeTime = lifetimeInMinutes > 0;
         var now = DateTime.UtcNow;
         var token = new JwtSecurityToken(
             claims: claims,
             issuer: issuer,
             audience: "*",
-            notBefore: now,
-            expires: now.Add(TimeSpan.FromMinutes(lifetimeInMinutes)),
+            notBefore: hasLifeTime ? now : null,
+            expires: hasLifeTime ? now.Add(TimeSpan.FromMinutes(lifetimeInMinutes)) : null,
             signingCredentials: new SigningCredentials(
                 signingKey,
                 SecurityAlgorithms.HmacSha256Signature
