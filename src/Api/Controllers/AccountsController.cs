@@ -42,9 +42,7 @@ public class AccountsController(
 
         if (result is { IsFailure: true, Exception: NoSuch<Account> })
         {
-            throw new InvalidOperationException(
-                "The operation could not proceed because the user is logged in but does not exist in the database. This might indicate a corrupted session or data inconsistency."
-            );
+            return ApiResponse.Unauthorized();
         }
 
         return new GetAuthenticatedUserResponse(result.Value);
@@ -76,7 +74,7 @@ public class AccountsController(
             {
                 NoSuch<Account> _ => ApiResponse.NotFound(),
                 NoSuch _ => ApiResponse.NotFound(),
-                _ => throw result.Exception,
+                _ => throw result.Exception
             };
         }
 
@@ -136,7 +134,7 @@ public class AccountsController(
                 RoleAlreadyAssigned _ => ApiResponse.Conflict(
                     "Account already assigned to role. Remove role before assigning"
                 ),
-                _ => throw result.Exception,
+                _ => throw result.Exception
             };
         }
 
@@ -171,7 +169,7 @@ public class AccountsController(
                 CannotManageOwn<Role> _ => ApiResponse.Forbid(
                     "Unassigning a role from your own account is not permitted"
                 ),
-                _ => throw result.Exception,
+                _ => throw result.Exception
             };
         }
 
