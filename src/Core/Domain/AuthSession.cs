@@ -5,7 +5,7 @@ namespace Core.Domain;
 public class AuthSession
 {
     private DateTime expiresAt;
-    private TimeSpan lifeSpan = TimeSpan.FromMinutes(30);
+    private readonly TimeSpan lifeSpan = TimeSpan.FromMinutes(30);
 
     public AuthSession(Guid userId, DateTime now)
     {

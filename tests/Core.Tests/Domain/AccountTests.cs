@@ -5,8 +5,8 @@ namespace Core.Tests.Domain;
 
 public class AccountTests
 {
+    private readonly TimeSpan sessionLifeSpan = TimeSpan.FromMinutes(30);
     private readonly Account testAccount = new("username", "email", "password");
-    private TimeSpan sessionLifeSpan = TimeSpan.FromMinutes(30);
 
     [Fact]
     public void HasBeenActivated_ShouldReturnTrue_WhenAccountIsNew()
@@ -55,15 +55,13 @@ public class AccountTests
     [Fact]
     public void AssignRole_ShouldRemoveAllSessions_WhenAccountHasNoRoleAssignedAndIsNotIssuer()
     {
-        var firstToken = "first-token";
-        CreateSessionAndGetId(firstToken);
-        var secondToken = "second-token";
-        CreateSessionAndGetId(secondToken);
+        var firstToken = CreateSessionAndGetToken();
+        var secondToken = CreateSessionAndGetToken();
 
         testAccount.AssignRole(Role.Admin, Guid.Empty);
 
-        Assert.Null(testAccount.GetSessionId(firstToken));
-        Assert.Null(testAccount.GetSessionId(secondToken));
+        AssertSessionRemoved(firstToken);
+        AssertSessionRemoved(secondToken);
     }
 
     [Fact]
@@ -98,7 +96,7 @@ public class AccountTests
     [Fact]
     public void CreateSession_ShouldFail_WhenAccountHasNotBeenActivatedYet()
     {
-        var result = testAccount.CreateSession(DateTime.MinValue, "token");
+        var result = testAccount.CreateSession(DateTime.MinValue);
 
         Assert.True(result.IsFailure);
         Assert.IsType<AccountNotActivated>(result.Exception);
@@ -109,24 +107,23 @@ public class AccountTests
     {
         testAccount.Activate();
 
-        var result = testAccount.CreateSession(DateTime.MinValue, "token");
+        var result = testAccount.CreateSession(DateTime.MinValue);
 
         Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
     }
 
     [Fact]
-    public void GetSessionId_ShouldReturnCorrectId_WhenSessionHasBeenCreated()
+    public void GetSessionCurrentToken_ShouldReturnCorrectToken_WhenSessionHasBeenCreated()
     {
-        var testToken = "token";
-
         testAccount.Activate();
 
-        var result = testAccount.CreateSession(DateTime.MinValue, testToken);
-        var expectedId = result.Value;
+        var expected = testAccount.CreateSession(DateTime.MinValue).Value;
 
-        var actualId = testAccount.GetSessionId(testToken);
+        var actual = testAccount.GetSessionCurrentToken(expected.SessionId);
 
-        Assert.Equal(expectedId, actualId);
+        Assert.NotNull(actual);
+        Assert.Equal(expected.Id, actual.Id);
     }
 
     [Fact]
@@ -134,16 +131,14 @@ public class AccountTests
     {
         testAccount.Activate();
 
-        var firstToken = "token1";
-        var firstId = CreateSessionAndGetId(firstToken);
+        var firstToken = CreateSessionAndGetToken();
 
-        var secondToken = "token2";
-        var secondId = CreateSessionAndGetId(secondToken);
+        var secondToken = CreateSessionAndGetToken();
 
-        testAccount.DestroySession(firstId);
+        testAccount.DestroySession(firstToken.SessionId);
 
-        Assert.Null(testAccount.GetSessionId(firstToken));
-        Assert.NotNull(testAccount.GetSessionId(secondToken));
+        AssertSessionRemoved(firstToken);
+        AssertSessionExists(secondToken);
     }
 
     [Fact]
@@ -151,75 +146,69 @@ public class AccountTests
     {
         testAccount.Activate();
 
-        var firstToken = "token1";
-        CreateSessionAndGetId(firstToken);
+        var firstToken = CreateSessionAndGetToken();
 
-        var secondToken = "token2";
-        CreateSessionAndGetId(secondToken);
+        var secondToken = CreateSessionAndGetToken();
 
         testAccount.DestroyAllSessions();
 
-        Assert.Null(testAccount.GetSessionId(firstToken));
-        Assert.Null(testAccount.GetSessionId(secondToken));
+        AssertSessionRemoved(firstToken);
+        AssertSessionRemoved(secondToken);
     }
 
     [Fact]
-    public void RefreshToken_ShouldFail_WhenSessionWithGivenTokenDoesNotExist()
+    public void RefreshToken_ShouldFail_WhenSessionLinkedToGivenTokenDoesNotExist()
     {
-        var result = testAccount.RefreshSession("invalid-token", DateTime.MinValue, "token");
+        var testToken = new RefreshToken(Guid.Empty, Guid.Empty);
+
+        var result = testAccount.RefreshSession(testToken, DateTime.MinValue);
 
         Assert.True(result.IsFailure);
         Assert.IsType<NoSuch<AuthSession>>(result.Exception);
     }
 
     [Fact]
-    public void RefreshToken_ShouldFailAndRemoveSession_WhenSessionExistsButIsNotActive()
+    public void RefreshToken_ShouldFailAndDestroyAllSessions_WhenGivenTokenIsNotTheCurrentOne()
     {
-        testAccount.Activate();
+        var firstSession = CreateSessionAndGetToken();
+        var secondSession = CreateSessionAndGetToken();
 
-        var now = DateTime.MinValue;
-        var token = "token";
-        testAccount.CreateSession(now, token);
+        var testToken = new RefreshToken(secondSession.SessionId);
 
-        var newToken = "new-token";
-        var result = testAccount.RefreshSession(token, now + sessionLifeSpan, newToken);
+        var result = testAccount.RefreshSession(testToken, DateTime.MinValue);
 
         Assert.True(result.IsFailure);
-        Assert.IsType<NoSuch<AuthSession>>(result.Exception);
-        Assert.Null(testAccount.GetSessionId(token));
-        Assert.Null(testAccount.GetSessionId(newToken));
+        Assert.IsType<InvalidToken>(result.Exception);
+        AssertSessionRemoved(firstSession);
+        AssertSessionRemoved(secondSession);
     }
 
     [Fact]
-    public void RefreshToken_ShouldSucceedAndReturnCorrectArchivedToken_WhenSessionExistsAndIsActive()
+    public void RefreshToken_ShouldFailAndDestroySession_WhenGivenTokenIsCurrentOneAndSessionIsInactive()
     {
-        testAccount.Activate();
+        var testSession = CreateSessionAndGetToken();
+        var otherSession = CreateSessionAndGetToken();
 
-        var now = DateTime.MinValue;
-        var token = "token";
-        var sessionId = testAccount.CreateSession(now, token).Value;
+        var result = testAccount.RefreshSession(testSession, DateTime.MinValue + sessionLifeSpan);
 
-        var result = testAccount.RefreshSession(token, now, "new-token");
+        Assert.True(result.IsFailure);
+        Assert.IsType<NoSuch<AuthSession>>(result.Exception);
+        AssertSessionExists(otherSession);
+        AssertSessionRemoved(testSession);
+    }
+
+    [Fact]
+    public void RefreshToken_ShouldSucceedAndReturnValidRefreshToken_WhenGivenTokenIsCurrentOneAndSessionIsActive()
+    {
+        var testSession = CreateSessionAndGetToken();
+
+        var result = testAccount.RefreshSession(testSession, DateTime.MinValue);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(result.Value.Token, token);
-        Assert.Equal(result.Value.SessionId, sessionId);
+        Assert.NotNull(result.Value);
+        Assert.Equal(testSession.SessionId, result.Value.SessionId);
     }
 
-    [Fact]
-    public void RefreshToken_ShouldChangeSessionToken_WhenSessionExistsAndIsActive()
-    {
-        testAccount.Activate();
-
-        var now = DateTime.MinValue;
-        var token = "token";
-        var newToken = "new-token";
-        var sessionId = testAccount.CreateSession(now, token).Value;
-        testAccount.RefreshSession(token, now, newToken);
-
-        Assert.Null(testAccount.GetSessionId(token));
-        Assert.Equal(sessionId, testAccount.GetSessionId(newToken));
-    }
 
     [Fact]
     public void ResetPassword_ShouldChangePassword()
@@ -233,21 +222,29 @@ public class AccountTests
     [Fact]
     public void ResetPassword_ShouldRemoveAllSessions()
     {
-        var firstToken = "token1";
-        CreateSessionAndGetId(firstToken);
+        var firstToken = CreateSessionAndGetToken();
 
-        var secondToken = "token2";
-        CreateSessionAndGetId(secondToken);
+        var secondToken = CreateSessionAndGetToken();
 
         testAccount.ResetPassword("new-password-hash");
 
-        Assert.Null(testAccount.GetSessionId(firstToken));
-        Assert.Null(testAccount.GetSessionId(secondToken));
+        AssertSessionRemoved(firstToken);
+        AssertSessionRemoved(secondToken);
     }
 
-    private Guid CreateSessionAndGetId(string token)
+    private RefreshToken CreateSessionAndGetToken()
     {
         testAccount.Activate();
-        return testAccount.CreateSession(DateTime.MinValue, token).Value;
+        return testAccount.CreateSession(DateTime.MinValue).Value;
+    }
+
+    private void AssertSessionRemoved(RefreshToken token)
+    {
+        Assert.Null(testAccount.GetSessionCurrentToken(token.SessionId));
+    }
+
+    private void AssertSessionExists(RefreshToken token)
+    {
+        Assert.NotNull(testAccount.GetSessionCurrentToken(token.SessionId));
     }
 }

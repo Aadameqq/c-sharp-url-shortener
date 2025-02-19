@@ -34,7 +34,7 @@ public class RefreshTokensUseCase(
             return result.Exception;
         }
 
-        var pair = tokenService.CreateTokenPair(account, payload.SessionId);
+        var pair = tokenService.CreateTokenPair(account, result.Value.SessionId, result.Value.Id);
 
         await accountsRepository.UpdateAndFlush(account);
 

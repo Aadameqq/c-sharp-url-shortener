@@ -13,6 +13,7 @@ namespace Infrastructure.Other;
 public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenService
 {
     private const string SessionIdClaimType = "sessionId";
+    private const string TokenIdClaimType = "tokenId";
 
     private readonly SymmetricSecurityKey accessTokenSigningKey = new(
         Encoding.UTF8.GetBytes(authOptions.Value.AccessTokenSecret)
@@ -21,6 +22,14 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
     private readonly SymmetricSecurityKey refreshTokenSigningKey = new(
         Encoding.UTF8.GetBytes(authOptions.Value.RefreshTokenSecret)
     );
+
+    public TokenPairOutput CreateTokenPair(Account account, Guid sessionId, Guid tokenId)
+    {
+        var accessToken = CreateAccessToken(account, sessionId);
+        var refreshToken = CreateRefreshToken(account, sessionId, tokenId);
+
+        return new TokenPairOutput(accessToken, refreshToken);
+    }
 
     public async Task<AccessTokenPayload?> FetchPayloadIfValid(string accessToken)
     {
@@ -31,17 +40,16 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
             ValidateIssuer = true,
             ValidIssuer = authOptions.Value.Issuer,
             ValidateAudience = false,
-            IssuerSigningKey = accessTokenSigningKey,
+            IssuerSigningKey = accessTokenSigningKey
         };
         try
         {
-            var principal = await Task.Run(
-                () =>
-                    new JwtSecurityTokenHandler().ValidateToken(
-                        accessToken,
-                        validationParameters,
-                        out var token
-                    )
+            var principal = await Task.Run(() =>
+                new JwtSecurityTokenHandler().ValidateToken(
+                    accessToken,
+                    validationParameters,
+                    out var token
+                )
             );
 
             if (principal is null)
@@ -61,13 +69,51 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
         }
     }
 
-    public string CreateAccessToken(Account account, Guid sessionId)
+    public async Task<RefreshTokenPayload?> FetchRefreshTokenPayloadIfValid(string refreshToken)
+    {
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidateLifetime = false,
+            ValidateIssuerSigningKey = true,
+            ValidateIssuer = true,
+            ValidIssuer = authOptions.Value.Issuer,
+            ValidateAudience = false,
+            IssuerSigningKey = refreshTokenSigningKey
+        };
+        try
+        {
+            var principal = await Task.Run(() =>
+                new JwtSecurityTokenHandler().ValidateToken(
+                    refreshToken,
+                    validationParameters,
+                    out var token
+                )
+            );
+
+            if (principal is null)
+            {
+                return null;
+            }
+
+            var accountId = Guid.Parse(GetClaim(principal, ClaimTypes.NameIdentifier));
+            var sessionId = Guid.Parse(GetClaim(principal, SessionIdClaimType));
+            var tokenId = Guid.Parse(GetClaim(principal, TokenIdClaimType));
+
+            return new RefreshTokenPayload(accountId, tokenId, sessionId);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private string CreateAccessToken(Account account, Guid sessionId)
     {
         var accessTokenClaims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, account.Id.ToString()),
             new(ClaimTypes.Role, account.Role.Name),
-            new(SessionIdClaimType, sessionId.ToString()),
+            new(SessionIdClaimType, sessionId.ToString())
         };
 
         return GenerateToken(
@@ -78,12 +124,13 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
         );
     }
 
-    public string CreateRefreshToken(Account account, Guid sessionId)
+    private string CreateRefreshToken(Account account, Guid sessionId, Guid tokenId)
     {
         var refreshTokenClaims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, account.Id.ToString()),
             new(SessionIdClaimType, sessionId.ToString()),
+            new(TokenIdClaimType, tokenId.ToString())
         };
 
         return GenerateToken(
@@ -92,44 +139,6 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
             0,
             refreshTokenSigningKey
         );
-    }
-
-    public async Task<RefreshTokenPayload?> FetchRefreshTokenPayloadIfValid(string refreshToken)
-    {
-        var validationParameters = new TokenValidationParameters
-        {
-            ValidateLifetime = false,
-            ValidateIssuerSigningKey = true,
-            ValidateIssuer = true,
-            ValidIssuer = authOptions.Value.Issuer,
-            ValidateAudience = false,
-            IssuerSigningKey = refreshTokenSigningKey,
-        };
-        try
-        {
-            var principal = await Task.Run(
-                () =>
-                    new JwtSecurityTokenHandler().ValidateToken(
-                        refreshToken,
-                        validationParameters,
-                        out var token
-                    )
-            );
-
-            if (principal is null)
-            {
-                return null;
-            }
-
-            var accountId = Guid.Parse(GetClaim(principal, ClaimTypes.NameIdentifier));
-            var sessionId = Guid.Parse(GetClaim(principal, SessionIdClaimType));
-
-            return new RefreshTokenPayload(accountId, sessionId);
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     private static string GetClaim(ClaimsPrincipal principal, string claimType)

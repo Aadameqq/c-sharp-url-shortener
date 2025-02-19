@@ -99,7 +99,7 @@ public class Account
             return new NoSuch<AuthSession>();
         }
 
-        if (session.CurrentToken.Id == token.Id)
+        if (session.CurrentToken.Id != token.Id)
         {
             DestroyAllSessions();
             return new InvalidToken();

@@ -41,7 +41,7 @@ public class LogInUseCaseTests
         dateTimeProviderMock.Setup(x => x.Now()).Returns(DateTime.MinValue);
 
         tokenServiceMock
-            .Setup(x => x.CreateTokenPair(existingAccount, It.IsAny<Guid>()))
+            .Setup(x => x.CreateTokenPair(existingAccount, It.IsAny<Guid>(), It.IsAny<Guid>()))
             .Returns(generatedTokenPair);
     }
 
@@ -99,19 +99,24 @@ public class LogInUseCaseTests
             .Callback((Account a) => actualAccount = a);
 
         var sessionId = Guid.Empty;
+        var tokenId = Guid.Empty;
 
         tokenServiceMock
-            .Setup(t => t.CreateTokenPair(It.IsAny<Account>(), It.IsAny<Guid>()))
-            .Callback((Account _, Guid s) => sessionId = s);
+            .Setup(t => t.CreateTokenPair(It.IsAny<Account>(), It.IsAny<Guid>(), It.IsAny<Guid>()))
+            .Callback((Account _, Guid s, Guid t) =>
+            {
+                sessionId = s;
+                tokenId = t;
+            }).Returns(generatedTokenPair);
 
         await useCase.Execute(existingAccount.Email, existingPlainPassword);
 
-        var expectedToken = actualAccount.GetSessionCurrentToken(sessionId);
+        var createdSession = actualAccount.GetSessionCurrentToken(sessionId);
 
         Assert.NotNull(actualAccount);
         Assert.Equal(existingAccount.Id, actualAccount.Id);
-        Assert.NotNull(expectedToken);
-        Assert.Equal(expectedToken.Id);
+        Assert.NotNull(createdSession);
+        Assert.Equal(tokenId, createdSession.Id);
     }
 
     private void AssertNoChanges()

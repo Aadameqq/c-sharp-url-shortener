@@ -32,7 +32,7 @@ public class LogInUseCase(
             return result.Exception;
         }
 
-        var tokenPair = tokenService.CreateTokenPair(account, result.Value.SessionId);
+        var tokenPair = tokenService.CreateTokenPair(account, result.Value.SessionId, result.Value.Id);
 
         await accountsRepository.UpdateAndFlush(account);
 

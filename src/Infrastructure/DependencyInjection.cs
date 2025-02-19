@@ -31,7 +31,6 @@ public static class DependencyInjection
         services.AddScoped<ActivationCodesRepository, RedisActivationCodesRepository>();
         services.AddScoped<PasswordResetCodesRepository, RedisPasswordResetCodesRepository>();
         services.AddScoped<PasswordResetEmailSender, PasswordResetEmailSenderImpl>();
-        services.AddScoped<ArchivedTokensRepository, EfArchivedTokensRepository>();
         services.AddSingleton<TokenService, SystemTokenService>();
         services.AddSingleton<DateTimeProvider, SystemDateTimeProvider>();
         return services;

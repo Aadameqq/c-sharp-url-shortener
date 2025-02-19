@@ -38,8 +38,7 @@ public class LogOutUseCaseTests
     [Fact]
     public async Task WhenAccountWithGivenIdExists_ShouldSucceedAndRemoveSession()
     {
-        var token = "token";
-        var sessionId = existingAccount.CreateSession(DateTime.MinValue, token).Value;
+        var testToken = existingAccount.CreateSession(DateTime.MinValue).Value;
 
         Account? actualAccount = null;
 
@@ -47,17 +46,12 @@ public class LogOutUseCaseTests
             .Setup(x => x.UpdateAndFlush(It.IsAny<Account>()))
             .Callback<Account>(a => actualAccount = a);
 
-        var result = await useCase.Execute(existingAccount.Id, sessionId);
+        var result = await useCase.Execute(existingAccount.Id, testToken.SessionId);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(actualAccount);
         Assert.Equal(existingAccount.Id, actualAccount.Id);
-        Assert.Null(actualAccount.GetSessionId(token));
-
-        accountsRepositoryMock.Verify(
-            x => x.UpdateAndFlush(It.IsAny<Account>()),
-            Times.AtLeastOnce
-        );
+        Assert.Null(actualAccount.GetSessionCurrentToken(testToken.SessionId));
     }
 
     private void AssertNoChanges()
