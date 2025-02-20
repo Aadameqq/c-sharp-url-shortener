@@ -35,13 +35,22 @@ public class RefreshTokensUseCaseTests
         existingSessionId = created.SessionId;
         existingCurrentTokenId = created.Id;
 
-        var validTokenPayload = new RefreshTokenPayload(existingAccount.Id, existingCurrentTokenId, existingSessionId);
+        var validTokenPayload = new RefreshTokenPayload(
+            existingAccount.Id,
+            existingCurrentTokenId,
+            existingSessionId
+        );
 
-        tokenServiceMock.Setup(s => s.FetchRefreshTokenPayloadIfValid(validToken)).ReturnsAsync(validTokenPayload);
+        tokenServiceMock
+            .Setup(s => s.FetchRefreshTokenPayloadIfValid(validToken))
+            .ReturnsAsync(validTokenPayload);
 
-        accountsRepositoryMock.Setup(r => r.FindById(existingAccount.Id)).ReturnsAsync(existingAccount);
+        accountsRepositoryMock
+            .Setup(r => r.FindById(existingAccount.Id))
+            .ReturnsAsync(existingAccount);
 
-        tokenServiceMock.Setup(s => s.CreateTokenPair(existingAccount, existingSessionId, It.IsAny<Guid>()))
+        tokenServiceMock
+            .Setup(s => s.CreateTokenPair(existingAccount, existingSessionId, It.IsAny<Guid>()))
             .Returns(existingTokenPair);
     }
 
@@ -58,9 +67,14 @@ public class RefreshTokensUseCaseTests
     [Fact]
     public async Task ShouldFail_WhenAccountWithIdFromPayloadDoesNotExist()
     {
-        var payloadWithInvalidAccount = new RefreshTokenPayload(Guid.Empty, existingCurrentTokenId, existingSessionId);
+        var payloadWithInvalidAccount = new RefreshTokenPayload(
+            Guid.Empty,
+            existingCurrentTokenId,
+            existingSessionId
+        );
 
-        tokenServiceMock.Setup(s => s.FetchRefreshTokenPayloadIfValid(validToken))
+        tokenServiceMock
+            .Setup(s => s.FetchRefreshTokenPayloadIfValid(validToken))
             .ReturnsAsync(payloadWithInvalidAccount);
 
         var result = await useCase.Execute(validToken);
@@ -73,9 +87,14 @@ public class RefreshTokensUseCaseTests
     [Fact]
     public async Task ShouldFail_WhenSessionLinkedToTokenDoesNotExist()
     {
-        var payloadWithInvalidSession = new RefreshTokenPayload(existingAccount.Id, existingCurrentTokenId, Guid.Empty);
+        var payloadWithInvalidSession = new RefreshTokenPayload(
+            existingAccount.Id,
+            existingCurrentTokenId,
+            Guid.Empty
+        );
 
-        tokenServiceMock.Setup(s => s.FetchRefreshTokenPayloadIfValid(validToken))
+        tokenServiceMock
+            .Setup(s => s.FetchRefreshTokenPayloadIfValid(validToken))
             .ReturnsAsync(payloadWithInvalidSession);
 
         var result = await useCase.Execute(validToken);
@@ -87,10 +106,14 @@ public class RefreshTokensUseCaseTests
     [Fact]
     public async Task ShouldFail_WhenSessionLinkedToTokenExistsButGivenTokenIsNotCurrentOne()
     {
-        var payloadWithTokenNotBeingCurrentOne =
-            new RefreshTokenPayload(existingAccount.Id, Guid.Empty, existingSessionId);
+        var payloadWithTokenNotBeingCurrentOne = new RefreshTokenPayload(
+            existingAccount.Id,
+            Guid.Empty,
+            existingSessionId
+        );
 
-        tokenServiceMock.Setup(s => s.FetchRefreshTokenPayloadIfValid(validToken))
+        tokenServiceMock
+            .Setup(s => s.FetchRefreshTokenPayloadIfValid(validToken))
             .ReturnsAsync(payloadWithTokenNotBeingCurrentOne);
 
         var result = await useCase.Execute(validToken);
@@ -115,11 +138,14 @@ public class RefreshTokensUseCaseTests
         Account actualAccount = null!;
         var newTokenId = Guid.Empty;
 
-        accountsRepositoryMock.Setup(r => r.UpdateAndFlush(It.IsAny<Account>()))
+        accountsRepositoryMock
+            .Setup(r => r.UpdateAndFlush(It.IsAny<Account>()))
             .Callback((Account a) => actualAccount = a);
 
-        tokenServiceMock.Setup(s => s.CreateTokenPair(existingAccount, existingSessionId, It.IsAny<Guid>()))
-            .Callback((Account _, Guid _, Guid t) => newTokenId = t).Returns(existingTokenPair);
+        tokenServiceMock
+            .Setup(s => s.CreateTokenPair(existingAccount, existingSessionId, It.IsAny<Guid>()))
+            .Callback((Account _, Guid _, Guid t) => newTokenId = t)
+            .Returns(existingTokenPair);
 
         await useCase.Execute(validToken);
 

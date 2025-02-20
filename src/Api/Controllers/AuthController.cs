@@ -30,7 +30,7 @@ public class AuthController(
                 AccountNotActivated _ => ApiResponse.Unauthorized(
                     "Account has not been activated yet"
                 ),
-                _ => throw result.Exception
+                _ => throw result.Exception,
             };
         }
 
@@ -65,7 +65,7 @@ public class AuthController(
                 NoSuch<Account> _ => ApiResponse.Unauthorized(),
                 NoSuch<AuthSession> _ => ApiResponse.NotFound(),
                 InvalidToken _ => ApiResponse.NotFound(),
-                _ => throw result.Exception
+                _ => throw result.Exception,
             };
         }
 

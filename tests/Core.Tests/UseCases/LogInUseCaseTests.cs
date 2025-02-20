@@ -103,11 +103,14 @@ public class LogInUseCaseTests
 
         tokenServiceMock
             .Setup(t => t.CreateTokenPair(It.IsAny<Account>(), It.IsAny<Guid>(), It.IsAny<Guid>()))
-            .Callback((Account _, Guid s, Guid t) =>
-            {
-                sessionId = s;
-                tokenId = t;
-            }).Returns(generatedTokenPair);
+            .Callback(
+                (Account _, Guid s, Guid t) =>
+                {
+                    sessionId = s;
+                    tokenId = t;
+                }
+            )
+            .Returns(generatedTokenPair);
 
         await useCase.Execute(existingAccount.Email, existingPlainPassword);
 
