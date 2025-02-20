@@ -27,7 +27,7 @@ jobs:
               run: dotnet restore --locked-mode
               
             - name: Build
-              run: dotnet build
+              run: dotnet build -warnaserror
               
             - name: Run Stylecop Check
               run: dotnet format analyzers --verify-no-changes && dotnet format style --verify-no-changes
