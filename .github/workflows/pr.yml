@@ -13,8 +13,9 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 3
         steps:
-            - name: Debug package.lock.json paths
-              run: find . -name "packages.lock.json"
+            - name: Checkout code
+              uses: actions/checkout@v4
+              
             - name: Setup .Net 8
               uses: actions/setup-dotnet@v4
               with:
