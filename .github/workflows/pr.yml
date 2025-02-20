@@ -1,4 +1,4 @@
-name: Pull request checks
+name: Pull Request Checks
 
 concurrency:
     group: ${{ github.head_ref || github.ref_name }}
@@ -13,7 +13,7 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 3
         steps:
-            - name: Checkout code
+            - name: Checkout Code
               uses: actions/checkout@v4
               
             - name: Setup .Net 8
@@ -31,6 +31,9 @@ jobs:
               
             - name: Run Stylecop Check
               run: dotnet format analyzers --verify-no-changes && dotnet format style --verify-no-changes
+            
+            - name: Install .Net Tools
+              run: dotnet tool restore
 
             - name: Run Csharpier Check
               run: dotnet csharpier . --check
