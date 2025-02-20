@@ -3,7 +3,7 @@ using Infrastructure.Options;
 using Infrastructure.Other;
 using Infrastructure.Persistence.EF;
 using Infrastructure.Persistence.Redis;
-using Infrastructure.smtp;
+using Infrastructure.Smtp;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;

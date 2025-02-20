@@ -21,7 +21,8 @@ public class DatabaseContext(IOptions<DatabaseOptions> databaseConfig) : DbConte
             accountBuilder.Property<Guid>("Id");
             accountBuilder.Property<bool>("activated").HasColumnName("Activated");
 
-            accountBuilder.Property(u => u.Role)
+            accountBuilder
+                .Property(u => u.Role)
                 .HasConversion(role => role.Name, name => Role.ParseOrFail(name))
                 .HasColumnType("varchar(50)");
 

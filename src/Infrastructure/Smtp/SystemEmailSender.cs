@@ -3,7 +3,7 @@ using Core.Ports;
 using Infrastructure.Options;
 using Microsoft.Extensions.Options;
 
-namespace Infrastructure.smtp;
+namespace Infrastructure.Smtp;
 
 public class SystemEmailSender(IOptions<SmtpOptions> smtpOptions) : EmailSender
 {

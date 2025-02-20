@@ -40,16 +40,17 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
             ValidateIssuer = true,
             ValidIssuer = authOptions.Value.Issuer,
             ValidateAudience = false,
-            IssuerSigningKey = accessTokenSigningKey
+            IssuerSigningKey = accessTokenSigningKey,
         };
         try
         {
-            var principal = await Task.Run(() =>
-                new JwtSecurityTokenHandler().ValidateToken(
-                    accessToken,
-                    validationParameters,
-                    out var token
-                )
+            var principal = await Task.Run(
+                () =>
+                    new JwtSecurityTokenHandler().ValidateToken(
+                        accessToken,
+                        validationParameters,
+                        out var token
+                    )
             );
 
             if (principal is null)
@@ -78,16 +79,17 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
             ValidateIssuer = true,
             ValidIssuer = authOptions.Value.Issuer,
             ValidateAudience = false,
-            IssuerSigningKey = refreshTokenSigningKey
+            IssuerSigningKey = refreshTokenSigningKey,
         };
         try
         {
-            var principal = await Task.Run(() =>
-                new JwtSecurityTokenHandler().ValidateToken(
-                    refreshToken,
-                    validationParameters,
-                    out var token
-                )
+            var principal = await Task.Run(
+                () =>
+                    new JwtSecurityTokenHandler().ValidateToken(
+                        refreshToken,
+                        validationParameters,
+                        out var token
+                    )
             );
 
             if (principal is null)
@@ -124,7 +126,7 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
         {
             new(ClaimTypes.NameIdentifier, account.Id.ToString()),
             new(ClaimTypes.Role, account.Role.Name),
-            new(SessionIdClaimType, sessionId.ToString())
+            new(SessionIdClaimType, sessionId.ToString()),
         };
 
         return GenerateToken(
@@ -141,7 +143,7 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
         {
             new(ClaimTypes.NameIdentifier, account.Id.ToString()),
             new(SessionIdClaimType, sessionId.ToString()),
-            new(TokenIdClaimType, tokenId.ToString())
+            new(TokenIdClaimType, tokenId.ToString()),
         };
 
         return GenerateToken(
@@ -151,7 +153,6 @@ public class SystemTokenService(IOptions<AuthOptions> authOptions) : TokenServic
             refreshTokenSigningKey
         );
     }
-
 
     private string GenerateToken(
         List<Claim> claims,

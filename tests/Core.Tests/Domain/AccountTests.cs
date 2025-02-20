@@ -209,7 +209,6 @@ public class AccountTests
         Assert.Equal(testSession.SessionId, result.Value.SessionId);
     }
 
-
     [Fact]
     public void ResetPassword_ShouldChangePassword()
     {
