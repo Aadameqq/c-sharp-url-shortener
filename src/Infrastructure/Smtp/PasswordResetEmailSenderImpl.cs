@@ -1,7 +1,7 @@
 using Core.Domain;
 using Core.Ports;
 
-namespace Infrastructure.smtp;
+namespace Infrastructure.Smtp;
 
 public class PasswordResetEmailSenderImpl(EmailSender emailSender) : PasswordResetEmailSender
 {

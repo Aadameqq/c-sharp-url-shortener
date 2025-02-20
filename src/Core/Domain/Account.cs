@@ -14,7 +14,9 @@ public class Account
         Password = password;
     }
 
+#pragma warning disable CS8618
     private Account() { }
+#pragma warning restore CS8618
 
     public Role Role { get; private set; } = Role.None;
     public Guid Id { get; } = Guid.NewGuid();

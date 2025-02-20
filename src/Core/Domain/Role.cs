@@ -24,7 +24,7 @@ public record Role
 
     public static bool TryParse(string name, out Role role)
     {
-        role = null;
+        role = null!;
         var found = Roles.Find(r => r.Name == name);
 
         if (found is null)

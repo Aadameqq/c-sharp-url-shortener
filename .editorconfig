@@ -14,6 +14,7 @@ dotnet_diagnostic.SA1101.severity = none
 dotnet_diagnostic.SA1313.severity = none
 dotnet_diagnostic.SA1206.severity = none
 dotnet_diagnostic.SA1633.severity = none
+dotnet_diagnostic.SA1402.severity = none
 # StyleCop options conflicting with Csharpier
 dotnet_diagnostic.IDE0075.severity = none
 dotnet_diagnostic.IDE0055.severity = none

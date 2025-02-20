@@ -21,7 +21,7 @@ public class InitializePasswordResetUseCase(
 
         var code = await codesRepository.Create(account);
 
-        emailSender.Send(account, code);
+        _ = emailSender.Send(account, code);
 
         return Result.Success();
     }

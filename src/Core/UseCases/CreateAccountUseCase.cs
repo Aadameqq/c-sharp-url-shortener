@@ -28,7 +28,7 @@ public class CreateAccountUseCase(
 
         var code = await activationCodesRepository.Create(account);
 
-        codeEmailSender.Send(account, code);
+        _ = codeEmailSender.Send(account, code);
 
         await accountsRepository.Flush();
 
