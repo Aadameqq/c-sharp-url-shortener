@@ -4,6 +4,7 @@ using Infrastructure.Other;
 using Infrastructure.Persistence.EF;
 using Infrastructure.Persistence.Redis;
 using Infrastructure.Smtp;
+using Infrastructure.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
@@ -31,6 +32,8 @@ public static class DependencyInjection
         services.AddScoped<ActivationCodesRepository, RedisActivationCodesRepository>();
         services.AddScoped<PasswordResetCodesRepository, RedisPasswordResetCodesRepository>();
         services.AddScoped<PasswordResetEmailSender, PasswordResetEmailSenderImpl>();
+        services.AddScoped<ProblemsRepository, EfProblemsRepository>();
+        services.AddScoped<ProblemContentStorage, LocalProblemContentStorage>();
         services.AddSingleton<TokenService, SystemTokenService>();
         services.AddSingleton<DateTimeProvider, SystemDateTimeProvider>();
         return services;

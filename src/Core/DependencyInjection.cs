@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<UnassignRoleUseCase>();
         services.AddScoped<ListRolesUseCase>();
         services.AddScoped<ResetPasswordUseCase>();
+        services.AddScoped<CreateProblemUseCase>();
         return services;
     }
 }

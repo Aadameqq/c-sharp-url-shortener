@@ -6,7 +6,7 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.ConfigureOptions();
+builder.Services.ConfigureOptions(builder.Environment);
 builder.Services.ConfigureInfrastructureDependencies();
 builder.Services.ConfigureCoreDependencies();
 
@@ -71,6 +71,8 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = "api-docs";
     });
 }
+
+app.UseStaticFiles(new StaticFileOptions { RequestPath = "/static" });
 
 app.UseMiddleware<JwtMiddleware>();
 app.MapControllers();
